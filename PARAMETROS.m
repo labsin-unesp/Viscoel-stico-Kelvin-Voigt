@@ -1,0 +1,167 @@
+%--------------------------------------------------------------------------   
+%                 IMPLEMENTAÇÃO NUMÉRICA - DISSERTAÇÃO
+%               Universidade Estadual Paulista, FEIS/UNESP
+
+%                  ESTUDO COMPORTAMENTAL DOS SOLOS
+%        Autores: Proença, S. M.; Paschoalini, T. A; Campos, B. J.
+%  Objetivo: Implementação do modelo Visco-Elástico Linear, com validação 
+%      do domínio pela Função de Plastificação de Mohr-Coulomb
+%                
+%                 ANÁLISE TRANSIENTE (Excitação senoidal) 
+
+%--------------------------- MODELO ALTERADO ------------------------------
+
+% Comentários:
+
+% Esta é a *única* rotina para se fazer alterações. Abaixo encontra-se os 
+% parâmetros de entrada para definir a geometria da vala, o refino da malha,
+% as propriedades do material, e a força de excitação.
+clc;
+disp([datestr(now,'<HH:MM:SS>') ' Limpando as variáveis'])
+close all; clear all;
+n_sim = 1;
+
+disp([datestr(now,'<HH:MM:SS>') ' Iniciando a simulação'])
+
+tic
+for n_sim=1:5; % 
+
+    
+local = randi([90 110], 1, 1);
+    
+% < PARÂMETROS GEOMÉTRICOS DE ENTRADA >
+
+                               % X - Horizontal / Y - Vertical
+xv=1;                        % Comprimento total em X [m]
+yv=0.6;                        % Comprimento total em Y [m] (0.4 e 0.25m)
+
+% De preferência, mantenha no número de divisões a proporção entre os tamanhos xv/yv!!
+% Além disso, o maior tamanho do elemento deve ser > c/(6*dt) (c é a
+% velocidade da onda de propagação e dt o passo no tempo escolhido)
+
+Ndivx=100;                      % Número desejado de divisões da malha (referente ao eixo X)  
+Ndivy=60;                       % Número desejado de divisões da malha (referente ao eixo Y) 
+
+% Faça um teste da malha para ver qual o refinamento de melhor custo-benifício 
+% Tem uma figura com o teste de convegencia que fiz para a camada de 0.25m
+
+%--------------------------------------------------------------------------
+% < PARÂMETROS DA AMOSTRAGEM DO SINAL >
+% Respeitando o Teorema da Amostragem ...
+
+t0=0;                          % Tempo inicial [s]                (0)
+tf=10;                          % Tempo final [s]                  (1)
+global Fs
+Fs=2000;                       % Frequência de amostragem [Hz]    (6400)
+
+T=1/Fs;                        % Período de amostragem [s]
+dt=T;                          % Incremento de tempo (= ao Período de amostragem T)
+df=1/tf;                       % Incremento da frequência [Hz]
+t=t0:dt:tf;                    % Vetor Tempo
+freq=0:df:Fs;                  % Vetor Frequência
+
+%--------------------------------------------------------------------------
+% < INSERINDO O TERMO FONTE >
+
+global we
+we=400;                        % [Hz] - Frequência do sinal de excitação harmônico
+A = randi([50 100], 1, 1)/10000;
+input=A*sin(2*pi*we*t);     % Teste para a malha (36x15)
+% Na superior o rms deve ser 0.03 à 0.008 m/s^2
+
+
+%--------------------------------------------------------------------------
+% < PROPRIEDADES DOS MATERIAIS > 
+
+% Recomendo utilizar estas propriedades setadas abaixo... Pois são valores
+% que condizem com a realidade e que melhor se ajustaram aos ensaios
+% experimentais da areia.
+
+% E1 = 98e6;                      % Módulo de Elasticidade [Pa]      (98e6)
+% v1 = 0.40;                      % Coeficiente de Poisson           (0.4)
+% p1 = 1900;                      % Densidade [Kg/m3]                (1900)
+% G = 24e6;                       % Módulo cisalhante [Pa]           (24e6)
+% neta = 0.000090; 
+
+% Função para alterar os valores aleatóriamente
+[E1, v1, p1, G, Neta] = PropSolo(we)
+
+
+%**************************************************************************
+
+
+% < TESTES AUTOMATIZADOS >
+
+
+% Densidade dinâmica efetiva [Pa.s] - VALORES EXPERIMENTAIS DA TABELA!
+% if we == 800
+%     neta=0.000055;                
+% elseif we == 600
+%     neta=0.000065;
+% elseif we == 400
+%     neta=0.000090;
+% elseif we == 300
+%     neta=0.000080;
+% else
+%     disp('Não temos dados experimentais para essa freq')
+% end
+
+% Pra quando eu for alterar os parâmetros da terra
+neta = Neta/E1;
+
+% Tamanho mínimo do elemento
+V_min = 100; % Velocidade mínima da onda de cisalhamento [m/s]. Ref: Fig 14
+dim_x = xv/Ndivx;
+dim_y = yv/Ndivy;
+dim_max = V_min/(Fs/2)/6; % É divido por 6 por segunraça (mas podia ser só 2)
+
+if dim_x > dim_max
+    disp('Faça mais divisões em x ou reduza a Fs')
+elseif dim_y > dim_max
+    disp('Faça mais divisões em y ou reduza a Fs')
+else
+    disp('Tamanho de elemento ok')
+end
+
+% OBSERVAÇÕES:
+% No final de cada processamento, surgirá 5 figuras, relacionadas a malha,
+% aos deslocamentos, as velocidades e as acelerações.
+
+% Quando for treinar a rede neural, vc irá fazer combinações de diversos pontos de coleta na superfície
+% o automático é gerar figuras do nó central superficial, mas *após rodar* o
+% caso poderá analisar outros pontos com o código a seguir:
+
+% Gsup é o grau de liberdade y do nó central superficial, substitua "Gsup"
+% por algum nó dentro do intervalo: 
+
+%                   (2*(((Ndivx+1)*Ndivy)+1)):2:2*Nnos
+
+
+% local é o Grau de liberdade do nó em que se encontra o vazamento própriamente dito
+% local=2*(floor((Ndivx+2)/2)) é o grau de liberdade y do nó da base central 
+
+%(Não teria o porque alterar, deixe assim! Analise os nós da superficie... 
+
+
+%                                ENJOY!
+
+%**************************************************************************
+
+ 
+    Principal
+    format long
+    
+    %saves
+    nomev=['velocidade_Fn' num2str(we) 'Hz_' local '_' num2str(n_sim) '.csv'];
+    nomea=['aceleracao_Fn' num2str(we) 'Hz_' local '_' num2str(n_sim) '.csv'];
+       
+    % Gravar em csv
+    params = [local, n_sim, E1, v1, p1, G, neta, A];
+    csvwrite(['Parametros_' num2str(we) 'Hz_' local '_' num2str(n_sim) '.csv'],params)
+    
+    csvwrite(nomev,velocidade);
+    csvwrite(nomea,aceleracao);
+    
+    close all
+end
+toc

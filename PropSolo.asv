@@ -1,0 +1,31 @@
+
+function [E1, v1, p1, G, Neta] = PropSolo(omega)
+
+% Intervalo de velocidade das ondas p e s de acordo com a Fig 10
+%V_s = randi([175 275], 1, 1);
+%V_p =  randi([275 400], 1, 1);
+E1 = randi([100 500], 1, 1)*10^6;
+
+% Propriedades básicas
+p1 = E1/V_p^2;
+G = randi([10 30], 1, 1)*10^6;
+
+% Módulo de Poisson
+v1 = randi([35 45], 1, 1)/100;
+
+% Eu tenho os dados de Vp, Vs de E e G_max -> Figura 10
+    % Tem-se uma relação entre G e G_max -> Figura 11 (Mas vale pros solos
+    % do Brasil?)
+% Com E e V_p eu consigo rho e não preciso de calcular G/G_max (mas
+% seria bom pra ver se bate ou se a diferença é muito grande)
+
+% Só vai faltar o tempo de retardação (n*), que ja é calculado pelo
+% software, ele só precisa de n. Tem duas maneiras de se obter:
+
+% 1. Figura 14: eta em função do LI -> descobrir como calcula
+% 2. Calcular com base em zeta -> ai o problema é calcular zeta
+
+% we é a fr equencia de entrada
+%Neta =  randi([76 500*10^7],1,1)*10^-4;
+zeta = 0.1;
+Neta = (2*G*zeta)/omega;
